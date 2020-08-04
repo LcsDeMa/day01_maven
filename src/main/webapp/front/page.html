@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script type="text/javascript" src="../js/jquery-1.8.3.min.js"></script>
+    <style type="text/css">
+        table {
+            border: 1px solid black;
+            width: 1000px;
+            background-color: pink;
+        }
+        tr {
+            border: 1px solid black;
+        }
+        td {
+            border: 1px dotted black;
+        }
+        #text1 {
+            width: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!--  以下显示表格  -->
+    <table id="table1">
+        <tr>
+            <th>name</th>
+            <th>fullName</th>
+            <th>location</th>
+            <th>capital</th>
+            <th>language</th>
+        </tr>
+    </table>
+
+<!--  以下显示控制分页的按钮  -->
+
+<!--  3条*6页  -->
+    <br>
+<!--首页-->
+    <input type="button" value="<<" id="btn-first" onclick="firstPage()">
+<!--上一页-->
+    <input type="button" value="<" id="btn-pre" onclick="previous()">
+    <input type="text" value=1 id="text1">
+    <input type="button" value=">" id="btn-next" onclick="next()">
+    <input type="button" value=">>" id="btn-last" onclick="lastPage()">
+
+<!--  测试  -->
+    <br>
+    <input type="button" value="测试" onclick="submittt()">
+</body>
+<script>
+    //以下是动态展示表格的js代码
+    //页面加载好了便展示
+    $(function () {
+        $.get(
+            "../CountryServlet",
+            {},
+            function (data) {
+                var countryList = JSON.parse(data);
+                display(countryList);
+            }
+        )
+    })
+    //获取最大页数  pageCount----用来判断是否到达最后一页,以及设置"btn-last"的value
+    //这里，我百度了一下ajax的同步回调。因为异步回调的话，这边的请求发送过去之后，在servlet那边执行的时候，这边的data还没有接收到，但是pageCount已经设置完了
+    function getMaxPageCount() {
+        var pageCount;
+        $.ajax({
+            url:"../GetMaxPageCountServlet",
+            data:{},
+            async:false,
+            type:"get",
+            success:function (data) {
+                pageCount = data;
+            }
+        });
+        return pageCount;
+    }
+    //展示表格的功能函数
+    function display(list) {
+        for (var i = 0; i < list.length; i++) {
+            var str = "";
+            str = "<tr>" +
+                "<td>" + list[i].name + "</td>" +
+                "<td>" + list[i].fullName + "</td>" +
+                "<td>" + list[i].location + "</td>" +
+                "<td>" + list[i].capital + "</td>" +
+                "<td>" + list[i].language + "</td>" +
+                "</tr>";
+            $("table").append(str);
+        }
+    }
+    //删除表格的功能函数----防止表格重复拼接
+    function removeRow() {
+        var table1 = document.getElementById("table1");
+        var rowNum = table1.rows.length;
+        for (var i = 1; i < rowNum; i++) {
+            table1.deleteRow(i);
+            rowNum--;
+            i--;
+        }
+    }
+   // 以下是控制分页的js代码
+   // 每点击一次按钮,就是在请求一次servlet获取数据.
+   // 若实现分页,首先得获得页数和每页的记录数,即dataCount = pageSize * pageCount
+   // dataCount从数据库里查询得到,pageSize自定义,pageCount使用除法得到.
+    function firstPage() {
+        removeRow();
+        var text = document.getElementById("text1");
+        text.setAttribute("value", 1);
+        var pageNo = $("#text1").val();
+        console.log(pageNo);
+        $.get(
+            "../CountryLimitedServlet",
+            {"data":1},
+            function (data) {
+                var countryList = JSON.parse(data);
+                display(countryList);
+            }
+        )
+    }
+    function previous() {
+        removeRow();
+        var text = document.getElementById("text1");
+        if (text.getAttribute("value") == 1) {
+            text.setAttribute("value", parseInt(text.getAttribute("value")));
+        } else {
+            text.setAttribute("value", parseInt(text.getAttribute("value")) - 1);       //这里的parseInt很重要
+        }
+        $.get(
+            "../CountryLimitedServlet",
+            {"data":parseInt(text.getAttribute("value"))},
+            function (data) {
+                var countryList = JSON.parse(data);
+                display(countryList);
+            }
+        )
+    }
+    function next() {
+        removeRow();
+        var text = document.getElementById("text1");
+        if (parseInt(text.getAttribute("value")) == parseInt(getMaxPageCount())) {
+            text.setAttribute("value", parseInt(text.getAttribute("value")));
+        } else {
+            text.setAttribute("value", parseInt(text.getAttribute("value")) + 1);       //这里的parseInt很重要
+
+        }
+        $.get(
+            "../CountryLimitedServlet",
+            {"data":parseInt(text.getAttribute("value"))},
+            function (data) {
+                var countryList = JSON.parse(data);
+                display(countryList);
+            }
+        )
+    }
+    function lastPage() {
+        removeRow();
+        var text = document.getElementById("text1");
+        text.setAttribute("value", getMaxPageCount());
+        var pageNo = $("#text1").val();
+        console.log(pageNo);
+        $.get(
+            "../CountryLimitedServlet",
+            {"data":getMaxPageCount()},
+            function (data) {
+                var countryList = JSON.parse(data);
+                display(countryList);
+            }
+        )
+    }
+
+
+    //测试----无关紧要
+    function submittt() {
+        console.log(getMaxPageCount())
+        var str = {"str":"This is a JSON string"};
+        // $.get(
+        //     "../GetMaxPageCountServlet",
+        //     {},
+        //     function (data) {
+        //         console.log(data);
+        //     }
+        // )
+    }
+</script>
+</html>
